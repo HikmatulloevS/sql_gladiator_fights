@@ -1,6 +1,5 @@
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
-from main import get_db
 from models import *
 
 
@@ -67,7 +66,3 @@ def get_fight(id: int, db):
     if not f:
         raise HTTPException(status_code=400, detail="Can't find fight")
     return f
-
-
-def del_fight(id: int, db):
-    pass
