@@ -1,6 +1,7 @@
 from random import random
 import uvicorn
-from fastapi import FastAPI
+from sqlalchemy.orm import Session
+from fastapi import FastAPI, Depends
 from crud import *
 from database import *
 from schemas import *
@@ -146,6 +147,7 @@ async def end_fight(fightId, db: Session = Depends(get_db)):
     db.commit()
 
     return Winner(winner=winner, experience=xp)
+
 
 if __name__ == "__main__":
     uvicorn.run(app)

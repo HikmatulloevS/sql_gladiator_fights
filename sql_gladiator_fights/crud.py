@@ -1,5 +1,4 @@
-from fastapi import Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import HTTPException
 from models import *
 
 
