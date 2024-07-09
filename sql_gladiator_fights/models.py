@@ -1,8 +1,6 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship, Mapped, mapped_column
-
+from sqlalchemy import Boolean, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column
 from database import Base
-
 from random import sample, choice, randint
 
 
@@ -19,24 +17,17 @@ class Character(Base):
     xp: Mapped[int] = mapped_column(Integer, default=0)
 
 
-    # player_id = relationship("Fight", back_populates="char_relation")
-
-
-#
-#
 class Bot(Base):
     __tablename__ = "bot"
 
     bot_id: Mapped[int] = mapped_column(primary_key=True)
     level: Mapped[int] = mapped_column(Integer, default=1)
-    strength: Mapped[int] = mapped_column(Integer, default=0)
-    agility: Mapped[int] = mapped_column(Integer, default=0)
-    stamina: Mapped[int] = mapped_column(Integer, default=0)
+    strength: Mapped[int] = mapped_column(Integer)
+    agility: Mapped[int] = mapped_column(Integer)
+    stamina: Mapped[int] = mapped_column(Integer)
 
     def return_random(self):
         return randint(self.level * 5, self.level * 8)
-
-    # b_id = relationship("Fight", back_populates="bot_relation")
 
     @staticmethod
     def attack():
@@ -54,10 +45,6 @@ class Lobby(Base):
     playerId: Mapped[int] = mapped_column(Integer, default=0)
 
 
-#
-# lobby_id = relationship("Fight", back_populates="lobby_relation")
-
-
 class Fight(Base):
     __tablename__ = "fight"
 
@@ -66,7 +53,3 @@ class Fight(Base):
     playerId: Mapped[int] = mapped_column(Integer, default=0)
     botId: Mapped[int] = mapped_column(Integer, default=0)
     lobbyId: Mapped[int] = mapped_column(Integer, default=0)
-
-    # char_relation = relationship("Character", back_populates="player_id")
-    # bot_relation = relationship("Bot", back_populates="b_id")
-    # lobby_relation = relationship("Lobby", back_populates="lobby_id")

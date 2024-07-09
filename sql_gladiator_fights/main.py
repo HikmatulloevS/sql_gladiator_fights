@@ -1,9 +1,6 @@
-from random import randint, random
-from typing import List
+from random import random
 import uvicorn
-from fastapi import Depends, FastAPI, HTTPException
-from sqlalchemy.orm import Session
-from models import *
+from fastapi import FastAPI
 from crud import *
 from database import *
 from schemas import *
@@ -29,12 +26,7 @@ def checking():
 
 @app.post("/api/characters")
 async def create_character(name: dict, db: Session = Depends(get_db)):
-    char = Character(name=name["name"])
-    db.add(char)
-    db.commit()
-    db.refresh(char)
-
-    return char
+    return create_char(name, db)
 
 
 @app.get('/api/characters/{id}')
@@ -48,25 +40,21 @@ async def adjust_character_attributes(id: int, upgrade: dict, db: Session = Depe
 
     amount_pt = upgrade["agility"] + upgrade["stamina"] + upgrade["strength"]
     if not amount_pt <= char.availablePoints:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail='Not enough points')
 
     # Обновление навыков
     char.strength += upgrade["strength"]
     char.agility += upgrade["agility"]
     char.stamina += upgrade["stamina"]
     char.availablePoints -= amount_pt
-
     db.commit()
+    db.refresh(char)
     return get_char(id, db)
 
 
 @app.post('/api/lobbies')
 async def create_lobby(db: Session = Depends(get_db)):
-    lb = Lobby()
-    db.add(lb)
-    db.commit()
-    db.refresh(lb)
-    return lb
+    return create_lb(db)
 
 
 @app.post('/api/lobbies/{lobbyId}/join')
@@ -74,10 +62,10 @@ async def join_lobby(lobbyId: int, charId: dict, db: Session = Depends(get_db)):
     lobby = get_lobby(lobbyId, db)
     char = get_char(charId["characterId"], db)
 
-    if char:
-        lobby.playerId = char.char_id
+    lobby.playerId = char.char_id
 
     db.commit()
+
     return get_lobby(lobbyId, db)
 
 
@@ -87,26 +75,16 @@ async def start_fight(lobbyId: int, db: Session = Depends(get_db)):
 
     char = get_char(lobby.playerId, db)
 
-    bot = Bot(level=1)
-    bot.stamina = bot.return_random()
-    bot.strength = bot.return_random()
-    bot.agility = bot.return_random()
+    bot = create_bot(db, 1)
 
-    db.add(bot)
-    db.commit()
-    db.refresh(bot)
-
-    fight = Fight(player_turn=True, playerId=char.char_id, botId=bot.bot_id, lobbyId=lobbyId)
-
-    db.add(fight)
-    db.commit()
-    db.refresh(fight)
+    fight = create_fight(char, bot, lobbyId, db)
 
     return get_fight(fight.fightId, db)
 
 
 @app.post('/api/fights/{fightId}/moves')
-async def make_move(fightId, attack: AttackParam, block1: AttackParam, block2: AttackParam, db: Session = Depends(get_db)):
+async def make_move(fightId, attack: AttackParam, block1: AttackParam, block2: AttackParam,
+                    db: Session = Depends(get_db)):
     fight = get_fight(fightId, db)
 
     # Получение персонажа и бота
@@ -150,12 +128,13 @@ async def make_move(fightId, attack: AttackParam, block1: AttackParam, block2: A
 async def end_fight(fightId, db: Session = Depends(get_db)):
     fight = get_fight(fightId, db)
     char = get_char(fight.playerId, db)
+    bot = get_bot(fight.botId, db)
 
-    if fight.opponentHealth > 0 and fight.playerHealth > 0:
+    if char.stamina > 0 and bot.stamina > 0:
         raise HTTPException(status_code=400, detail="Fight isn't over")
 
     xp = 100
-    winner = "player" if fight.opponentHealth <= 0 else "bot"
+    winner = "player" if bot.stamina <= 0 else "bot"
 
     if winner == "player":
         char.xp += xp
@@ -166,6 +145,7 @@ async def end_fight(fightId, db: Session = Depends(get_db)):
     db.delete(fight)
     db.commit()
 
+    return Winner(winner=winner, experience=xp)
 
 if __name__ == "__main__":
     uvicorn.run(app)
